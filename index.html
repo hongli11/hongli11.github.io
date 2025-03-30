@@ -1,103 +1,15 @@
-下载对应型号的TTL包，到这里找，注意是TTL!!!：https://www.ecoo.top/download
-解压后可以看到有rootfs-32.img文件(windows百度显示文件后缀名可显示.img)
-将rootfs-32.img上传至电脑编译系统的主机中
-#～
-挂载img(没有sudo命令的切换到root用户操作，以下操作需要root)：
-sudo mount /home/hongli/rootfs-32.img /mnt/
-下载官方包
-https://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-armhf.tar.gz
-#~
-mkdir ubuntu
-sudo tar -xpf ubuntu-base-20.04.5-base-armhf.tar.gz -C ubuntu/
-sudo apt-get install qemu-user-static
-sudo cp /etc/resolv.conf ubuntu/etc/resolv.conf
-sudo cp /usr/bin/qemu-arm-static ubuntu/usr/bin/
-修改ubuntu/etc/apt/sources.list内容如下：
+<p>下载对应型号的TTL包，到这里找，注意是TTL!!!：https://www.ecoo.top/download<br>解压后可以看到有rootfs-32.img文件(windows百度显示文件后缀名可显示.img)<br>将rootfs-32.img上传至电脑编译系统的主机中<br>#～<br>挂载img(没有sudo命令的切换到root用户操作，以下操作需要root)：<br>sudo mount /home/hongli/rootfs-32.img /mnt/<br>下载官方包<br>https://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-armhf.tar.gz<br>#~<br>mkdir ubuntu<br>sudo tar -xpf ubuntu-base-20.04.5-base-armhf.tar.gz -C ubuntu/<br>sudo apt-get install qemu-user-static<br>sudo cp /etc/resolv.conf ubuntu/etc/resolv.conf<br>sudo cp /usr/bin/qemu-arm-static ubuntu/usr/bin/<br>修改ubuntu/etc/apt/sources.list内容如下：</p>
 
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal main restricted
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates main restricted
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal universe
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates universe
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal multiverse
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates multiverse
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-backports main restricted universe multiverse
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security main restricted
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security universe
-deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security multiverse
-#~
-sudo mount -o bind /proc ubuntu/proc
-sudo mount -o bind /dev ubuntu/dev
-sudo chroot ubuntu
-##
-apt update
-apt install rsyslog systemd
-apt install sudo htop vim bash-completion
-apt install ssh net-tools ethtool ifupdown iputils-ping network-manager
-#~
-touch /etc/network/interfaces.d/eth0
-如果dhcp，eth0内容如下：
+<p>deb http://repo.huaweicloud.com/ubuntu-ports/ focal main restricted<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates main restricted<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal universe<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates universe<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal multiverse<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates multiverse<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-backports main restricted universe multiverse<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security main restricted<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security universe<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security multiverse<br>#~<br>sudo mount -o bind /proc ubuntu/proc<br>sudo mount -o bind /dev ubuntu/dev<br>sudo chroot ubuntu<br>##<br>apt update<br>apt install rsyslog systemd<br>apt install sudo htop vim bash-completion<br>apt install ssh net-tools ethtool ifupdown iputils-ping network-manager<br>#~<br>touch /etc/network/interfaces.d/eth0<br>如果dhcp，eth0内容如下：</p>
 
-auto eth0
-iface eth0 inet dhcp
-pre-up ifconfig eth0 hw ether 10:10:10:10:10:10
-如果固定ip，eth0内容如下：
+<p>auto eth0<br>iface eth0 inet dhcp<br>pre-up ifconfig eth0 hw ether 10:10:10:10:10:10<br>如果固定ip，eth0内容如下：</p>
 
-auto eth0
-iface eth0 inet static
-address 192.168.1.10
-netmask 255.255.255.0
-gateway 192.168.1.1
-dns-nameservers 223.5.5.5
-dns-nameservers 223.6.6.6
-pre-up ifconfig eth0 hw ether 10:10:10:10:10:20
-ip地址根据自己情况修改。
-#~
-echo "hi3798mv100" > /etc/hostname
-echo "127.0.0.1 localhost" >> /etc/hosts
-echo "127.0.0.1 hi3798mv100" >> /etc/hosts
+<p>auto eth0<br>iface eth0 inet static<br>address 192.168.1.10<br>netmask 255.255.255.0<br>gateway 192.168.1.1<br>dns-nameservers 223.5.5.5<br>dns-nameservers 223.6.6.6<br>pre-up ifconfig eth0 hw ether 10:10:10:10:10:20<br>ip地址根据自己情况修改。<br>#~<br>echo &quot;hi3798mv100&quot; &gt; /etc/hostname<br>echo &quot;127.0.0.1 localhost&quot; &gt;&gt; /etc/hosts<br>echo &quot;127.0.0.1 hi3798mv100&quot; &gt;&gt; /etc/hosts</p>
 
-ln -s /lib/systemd/system/rc-local.service /etc/systemd/system/rc-local.service
-echo [Install] >> /etc/systemd/system/rc-local.service
-echo WantedBy=multi-user.target >> /etc/systemd/system/rc-local.service
-echo Alias=rc-local.service >> /etc/systemd/system/rc-local.service
-#~
-systemctl enable rc-local.service
-systemctl stop motd-news.timer
-systemctl mask motd-news.timer
-systemctl stop motd-news.service
-systemctl mask motd-news.service
-systemctl stop networkd-dispatcher
-systemctl mask networkd-dispatcher
-修改root密码
+<p>ln -s /lib/systemd/system/rc-local.service /etc/systemd/system/rc-local.service<br>echo [Install] &gt;&gt; /etc/systemd/system/rc-local.service<br>echo WantedBy=multi-user.target &gt;&gt; /etc/systemd/system/rc-local.service<br>echo Alias=rc-local.service &gt;&gt; /etc/systemd/system/rc-local.service<br>#~<br>systemctl enable rc-local.service<br>systemctl stop motd-news.timer<br>systemctl mask motd-news.timer<br>systemctl stop motd-news.service<br>systemctl mask motd-news.service<br>systemctl stop networkd-dispatcher<br>systemctl mask networkd-dispatcher<br>修改root密码</p>
 
-passwd
-允许root远程ssh
+<p>passwd<br>允许root远程ssh</p>
 
-echo PermitRootLogin yes >> /etc/ssh/sshd_config
-#~
-exit
+<p>echo PermitRootLogin yes &gt;&gt; /etc/ssh/sshd_config<br>#~<br>exit</p>
 
-sudo umount ubuntu/dev
-sudo umount ubuntu/proc
-#～
-将系统通过命令拷贝到镜像中：
-先删除原来的内容：
-sudo rm -rf /mnt/*
-再拷贝(这里的ubuntu/是你编好的系统)：
-sudo cp -R ubuntu/* /mnt/
-取消挂载
-sudo umount /mnt/
-将上面做好的rootfs-32.img下载下来替换原来TTL刷机包中的rootfs-32.img
-#~
-    挂载backup分区，取出backup-32.gz：
-mkdir /bak && sudo mount /dev/mmcblk0p8 /bak && cd /bak
-   把backup-32.gz删除
-    和方法一的4-7步骤一样，将系统拷贝到backup-32文件中
-#~   
-   使用更高压缩率（速度较慢，但压缩率更高）：
-gzip -9 -c rootfs-32.img > backup-32.gz
-  上传到bak目录
-    最后执行命令
-recoverbackup
- #~
- 开机后先执行resize2fs /dev/mmcblk0p9
+<p>sudo umount ubuntu/dev<br>sudo umount ubuntu/proc<br>#～<br>将系统通过命令拷贝到镜像中：<br>先删除原来的内容：<br>sudo rm -rf /mnt/*<br>再拷贝(这里的ubuntu/是你编好的系统)：<br>sudo cp -R ubuntu/* /mnt/<br>取消挂载<br>sudo umount /mnt/<br>将上面做好的rootfs-32.img下载下来替换原来TTL刷机包中的rootfs-32.img<br>#~<br> 挂载backup分区，取出backup-32.gz：<br>mkdir /bak &amp;&amp; sudo mount /dev/mmcblk0p8 /bak &amp;&amp; cd /bak<br> 把backup-32.gz删除<br> 和方法一的4-7步骤一样，将系统拷贝到backup-32文件中<br>#~ <br> 使用更高压缩率（速度较慢，但压缩率更高）：<br>gzip -9 -c rootfs-32.img &gt; backup-32.gz<br> 上传到bak目录<br> 最后执行命令<br>recoverbackup<br> #~<br> 开机后先执行resize2fs /dev/mmcblk0p9<br></p>
