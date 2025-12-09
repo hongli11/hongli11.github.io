@@ -1,15 +1,184 @@
-<p>下载对应型号的TTL包，到这里找，注意是TTL!!!：https://www.ecoo.top/download<br>解压后可以看到有rootfs-32.img文件(windows百度显示文件后缀名可显示.img)<br>将rootfs-32.img上传至电脑编译系统的主机中<br>#～<br>挂载img(没有sudo命令的切换到root用户操作，以下操作需要root)：<br>sudo mount /home/hongli/rootfs-32.img /mnt/<br>下载官方包<br>https://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-armhf.tar.gz<br>#~<br>mkdir ubuntu<br>sudo tar -xpf ubuntu-base-20.04.5-base-armhf.tar.gz -C ubuntu/<br>sudo apt-get install qemu-user-static<br>sudo cp /etc/resolv.conf ubuntu/etc/resolv.conf<br>sudo cp /usr/bin/qemu-arm-static ubuntu/usr/bin/<br>修改ubuntu/etc/apt/sources.list内容如下：</p>
+海思 Hi3798MV100 定制 Ubuntu 系统构建指南
+一、准备工作
+1. 获取基础文件
+# 下载 TTL 刷机包（从指定链接获取对应型号）
+# 解压后得到 rootfs-32.img 文件
 
-<p>deb http://repo.huaweicloud.com/ubuntu-ports/ focal main restricted<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates main restricted<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal universe<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates universe<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal multiverse<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-updates multiverse<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-backports main restricted universe multiverse<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security main restricted<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security universe<br>deb http://repo.huaweicloud.com/ubuntu-ports/ focal-security multiverse<br>#~<br>sudo mount -o bind /proc ubuntu/proc<br>sudo mount -o bind /dev ubuntu/dev<br>sudo chroot ubuntu<br>##<br>apt update<br>apt install rsyslog systemd<br>apt install sudo htop vim bash-completion<br>apt install ssh net-tools ethtool ifupdown iputils-ping network-manager<br>#~<br>touch /etc/network/interfaces.d/eth0<br>如果dhcp，eth0内容如下：</p>
+# 下载 Ubuntu 基础系统
+wget https://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-armhf.tar.gz
+# 安装必要工具
+sudo apt update
+sudo apt install qemu-user-static rsync -y
 
-<p>auto eth0<br>iface eth0 inet dhcp<br>pre-up ifconfig eth0 hw ether 10:10:10:10:10:10<br>如果固定ip，eth0内容如下：</p>
+# 创建并解压 Ubuntu 根文件系统
+mkdir ubuntu-rootfs
+sudo tar -xpf ubuntu-base-20.04.5-base-armhf.tar.gz -C ubuntu-rootfs/
+# 准备 qemu 模拟器
+sudo cp /usr/bin/qemu-arm-static ubuntu-rootfs/usr/bin/
 
-<p>auto eth0<br>iface eth0 inet static<br>address 192.168.1.10<br>netmask 255.255.255.0<br>gateway 192.168.1.1<br>dns-nameservers 223.5.5.5<br>dns-nameservers 223.6.6.6<br>pre-up ifconfig eth0 hw ether 10:10:10:10:10:20<br>ip地址根据自己情况修改。<br>#~<br>echo &quot;hi3798mv100&quot; &gt; /etc/hostname<br>echo &quot;127.0.0.1 localhost&quot; &gt;&gt; /etc/hosts<br>echo &quot;127.0.0.1 hi3798mv100&quot; &gt;&gt; /etc/hosts</p>
+# 配置 DNS
+sudo cp /etc/resolv.conf ubuntu-rootfs/etc/resolv.conf
 
-<p>ln -s /lib/systemd/system/rc-local.service /etc/systemd/system/rc-local.service<br>echo [Install] &gt;&gt; /etc/systemd/system/rc-local.service<br>echo WantedBy=multi-user.target &gt;&gt; /etc/systemd/system/rc-local.service<br>echo Alias=rc-local.service &gt;&gt; /etc/systemd/system/rc-local.service<br>#~<br>systemctl enable rc-local.service<br>systemctl stop motd-news.timer<br>systemctl mask motd-news.timer<br>systemctl stop motd-news.service<br>systemctl mask motd-news.service<br>systemctl stop networkd-dispatcher<br>systemctl mask networkd-dispatcher<br>修改root密码</p>
+# 挂载必要的系统目录
+sudo mount -t proc /proc ubuntu-rootfs/proc
+sudo mount -t sysfs /sys ubuntu-rootfs/sys
+sudo mount -o bind /dev ubuntu-rootfs/dev
+sudo mount -o bind /dev/pts ubuntu-rootfs/dev/pts
+sudo tee ubuntu-rootfs/etc/apt/sources.list > /dev/null
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ focal main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ focal-updates main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ focal-security main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ focal-backports main restricted universe multiverse
+sudo chroot ubuntu-rootfs /bin/bash
+# 在 chroot 环境中执行以下命令：
 
-<p>passwd<br>允许root远程ssh</p>
+# 基础系统更新
+apt update
+apt upgrade -y
 
-<p>echo PermitRootLogin yes &gt;&gt; /etc/ssh/sshd_config<br>#~<br>exit</p>
+# 安装必要软件包
+apt install -y systemd rsyslog sudo vim bash-completion \
+               ssh net-tools ethtool ifupdown network-manager \
+               iputils-ping wget curl htop
 
-<p>sudo umount ubuntu/dev<br>sudo umount ubuntu/proc<br>#～<br>将系统通过命令拷贝到镜像中：<br>先删除原来的内容：<br>sudo rm -rf /mnt/*<br>再拷贝(这里的ubuntu/是你编好的系统)：<br>sudo cp -R ubuntu/* /mnt/<br>取消挂载<br>sudo umount /mnt/<br>将上面做好的rootfs-32.img下载下来替换原来TTL刷机包中的rootfs-32.img<br>#~<br> 挂载backup分区，取出backup-32.gz：<br>mkdir /bak &amp;&amp; sudo mount /dev/mmcblk0p8 /bak &amp;&amp; cd /bak<br> 把backup-32.gz删除<br> 和方法一的4-7步骤一样，将系统拷贝到backup-32文件中<br>#~ <br> 使用更高压缩率（速度较慢，但压缩率更高）：<br>gzip -9 -c rootfs-32.img &gt; backup-32.gz<br> 上传到bak目录<br> 最后执行命令<br>recoverbackup<br> #~<br> 开机后先执行resize2fs /dev/mmcblk0p9<br></p>
+# 配置网络（根据需求选择 DHCP 或静态 IP）
+
+# 选项 A: DHCP 配置
+cat > /etc/network/interfaces.d/eth0 << 'EOF'
+auto eth0
+iface eth0 inet dhcp
+pre-up ifconfig eth0 hw ether 10:10:10:10:10:10
+EOF
+
+# 选项 B: 静态 IP 配置（修改 IP 地址为实际值）
+cat > /etc/network/interfaces.d/eth0 << 'EOF'
+auto eth0
+iface eth0 inet static
+address 192.168.1.10
+netmask 255.255.255.0
+gateway 192.168.1.1
+dns-nameservers 223.5.5.5 223.6.6.6
+pre-up ifconfig eth0 hw ether 10:10:10:10:10:20
+EOF
+
+# 设置主机名
+echo "hi3798mv100" > /etc/hostname
+cat > /etc/hosts << EOF
+127.0.0.1 localhost
+127.0.0.1 hi3798mv100
+EOF
+
+# 配置系统服务
+systemctl enable ssh
+systemctl disable motd-news.timer
+systemctl disable networkd-dispatcher
+
+# 设置 root 密码
+echo "请设置 root 密码："
+passwd root
+
+# 允许 root SSH 登录
+echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+
+# 创建 rc-local 服务
+cat > /etc/systemd/system/rc-local.service << EOF
+[Unit]
+Description=/etc/rc.local Compatibility
+ConditionPathExists=/etc/rc.local
+
+[Service]
+Type=forking
+ExecStart=/etc/rc.local start
+TimeoutSec=0
+StandardOutput=tty
+RemainAfterExit=yes
+SysVStartPriority=99
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 创建 rc.local 脚本
+cat > /etc/rc.local << 'EOF'
+#!/bin/bash
+# 开机后自动扩展分区（第一次启动时执行）
+if [ -f /firstboot ]; then
+    resize2fs /dev/mmcblk0p9
+    rm -f /firstboot
+fi
+exit 0
+EOF
+
+chmod +x /etc/rc.local
+systemctl enable rc-local
+
+# 清理缓存
+apt clean
+rm -rf /var/lib/apt/lists/*
+
+# 退出 chroot 环境
+exit# 卸载挂载点
+sudo umount ubuntu-rootfs/dev/pts
+sudo umount ubuntu-rootfs/dev
+sudo umount ubuntu-rootfs/sys
+sudo umount ubuntu-rootfs/proc
+# 挂载原始镜像
+mkdir -p /mnt/rootfs
+sudo mount /home/hongli/rootfs-32.img /mnt/rootfs
+
+# 清空并复制新系统
+sudo rm -rf /mnt/rootfs/*
+sudo rsync -a ubuntu-rootfs/ /mnt/rootfs/
+
+# 创建首次启动标记
+sudo touch /mnt/rootfs/firstboot
+
+# 卸载镜像
+sudo umount /mnt/rootfs  
+  # 压缩系统镜像（高压缩比）
+gzip -9 -k -c rootfs-32.img > backup-32.gz
+  # 在目标设备上执行：
+# 挂载备份分区
+mkdir -p /bak
+mount /dev/mmcblk0p8 /bak
+
+# 替换备份文件
+cp backup-32.gz /bak/
+sync
+
+# 执行恢复命令（如果需要）
+recoverbackup
+
+# 首次启动后扩展分区
+resize2fs /dev/mmcblk0p9
+五、快速使用脚本
+保存为 build_rootfs.sh
+  #!/bin/bash
+set -e
+
+echo "=== Hi3798MV100 Ubuntu 根文件系统构建脚本 ==="
+
+# 参数检查
+if [ $# -lt 1 ]; then
+    echo "用法: $0 <原始rootfs-32.img路径>"
+    exit 1
+fi
+
+ORIG_IMG=$1
+WORKDIR=$(pwd)
+
+echo "[1/4] 准备环境..."
+sudo apt update
+sudo apt install -y qemu-user-static rsync
+
+echo "[2/4] 构建根文件系统..."
+# 此处添加上述构建步骤
+
+echo "[3/4] 写入镜像..."
+sudo mount ${ORIG_IMG} /mnt/rootfs
+sudo rsync -a ubuntu-rootfs/ /mnt/rootfs/
+sudo umount /mnt/rootfs
+
+echo "[4/4] 完成！"
+echo "生成的镜像: ${ORIG_IMG}"
+echo "备份文件: ${WORKDIR}/backup-32.gz"
