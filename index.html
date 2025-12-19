@@ -145,19 +145,8 @@
             z-index: 999;
         }
 
-        .foot_marker a {
-            color: #4cc9f0;
-            text-decoration: none;
-            transition: var(--transition);
-            padding: 3px 8px;
-            border-radius: 12px;
-        }
-
-        .foot_marker a:hover {
-            color: #4361ee;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
+        /* 移除了foot_marker中a标签的样式，因为已不需要链接 */
+        
         /* 动画效果 */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -369,7 +358,7 @@
     </div>
 
     <div class="foot_marker">
-        <a href="https://github.com/eooce" target="_blank">Powered by eooce</a>
+        Powered by eooce  <!-- 移除了a标签，仅保留文本 -->
     </div>
 
     <script>
